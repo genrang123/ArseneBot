@@ -317,6 +317,13 @@ class GuildPlayer extends EventEmitter {
   }
 
   async back() {
+    if (this.isLoading) return null;
+
+    // Skip any duplicate history entry that still points at the current track.
+    while (this.history.length > 0 && this.current && this.history[this.history.length - 1]?.url === this.current.url) {
+      this.history.pop();
+    }
+
     const previous = this.history.pop() || null;
     if (!previous) return null;
 

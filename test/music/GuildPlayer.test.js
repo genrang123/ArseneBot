@@ -175,6 +175,47 @@ test('back restores the previous track and keeps current next in queue', async (
   assert.deepEqual(player.history.map((item) => item.title), []);
 });
 
+test('back does not mutate playback state while a new track is still loading', async () => {
+  let releaseStream;
+  const youtube = {
+    createStream: (current, seekSeconds = 0) => new Promise((resolve) => {
+      releaseStream = () => resolve({ stream: { current, seekSeconds }, type: 'opus' });
+    }),
+  };
+  const { player } = createPlayer({ youtube });
+
+  player.current = track('two');
+  player.history = [track('one')];
+  player.queue = [track('three')];
+  const playPromise = player.playCurrent();
+
+  assert.equal(player.isLoading, true);
+  const previous = await player.back();
+
+  assert.equal(previous, null);
+  assert.equal(player.current.title, 'two');
+  assert.deepEqual(player.history.map((item) => item.title), ['one']);
+  assert.deepEqual(player.queue.map((item) => item.title), ['three']);
+
+  releaseStream();
+  await playPromise;
+});
+
+test('back skips duplicate current-track entries in history and restores the true previous track', async () => {
+  const { player } = createPlayer();
+
+  player.current = track('two');
+  player.history = [track('one'), track('two')];
+  player.queue = [track('three')];
+
+  const previous = await player.back();
+
+  assert.equal(previous.title, 'one');
+  assert.equal(player.current.title, 'one');
+  assert.deepEqual(player.queue.map((item) => item.title), ['two', 'three']);
+  assert.deepEqual(player.history.map((item) => item.title), []);
+});
+
 test('autoplay adds a related track when queue runs out', async () => {
   const notified = [];
   const { player } = createPlayer({

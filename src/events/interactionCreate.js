@@ -35,12 +35,18 @@ async function handleMusicControl(interaction, context) {
 
     switch (interaction.customId) {
       case MUSIC_CONTROL_IDS.back: {
-        const previous = await player.back();
-        if (!previous || !player.current) {
+        // Pre-check: only an early-exit error goes through interaction.reply.
+        // On the happy path we defer immediately so Discord doesn't time out
+        // while player.back() waits for youtube.createStream.
+        if (!player.current || !(player.history?.length > 0)) {
           await interaction.reply({ embeds: [errorEmbed(messages.playback.noPreviousTrack)], ephemeral: true });
           return;
         }
         await interaction.deferUpdate();
+        const previous = await player.back();
+        if (!previous) {
+          await interaction.followUp({ embeds: [errorEmbed(messages.playback.noPreviousTrack)], ephemeral: true });
+        }
         return;
       }
       case MUSIC_CONTROL_IDS.pause: {

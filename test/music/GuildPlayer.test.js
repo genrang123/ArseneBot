@@ -351,4 +351,21 @@ test('back suppresses idle handler and stops playback before switching to previo
   assert.equal(audioPlayer.stopped, stoppedBefore + 1);
   // Verify state is Playing again (back restarted playback)
   assert.equal(audioPlayer.state.status, AudioPlayerStatus.Playing);
+  // Verify _suppressIdle was reset after transition
+  assert.equal(player._suppressIdle, false);
+});
+
+test('back resets _suppressIdle even when playCurrent throws', async () => {
+  const { player } = createPlayer({
+    youtube: {
+      createStream: async () => {
+        throw new Error('stream failure');
+      },
+    },
+  });
+  player.current = track('two');
+  player.history = [track('one')];
+
+  await assert.rejects(() => player.back(), /stream failure/);
+  assert.equal(player._suppressIdle, false);
 });

@@ -53,6 +53,7 @@ test('back button defers update after switching to previous track', async () => 
   const interaction = createButtonInteraction(MUSIC_CONTROL_IDS.back);
   const context = createContext({
     current: { title: 'current' },
+    history: [{ title: 'previous' }],
     voiceChannelId: 'v1',
     async back() {
       backCalls += 1;

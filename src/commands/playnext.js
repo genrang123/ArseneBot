@@ -7,8 +7,18 @@ const { requireSameVoiceChannel } = require('./voiceAccess');
 
 const TRANSIENT_YOUTUBE_ERROR_MESSAGE = messages.youtube.transientError;
 
+const QUEUE_ACK_DELETE_DELAY_MS = 8000;
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function finishQueuedReply(interaction, player, message) {
+  await interaction.editReply({ embeds: [successEmbed(message)] });
+  await player.publishNowPlayingMessage?.();
+  setTimeout(() => {
+    interaction.deleteReply?.().catch?.(() => {});
+  }, QUEUE_ACK_DELETE_DELAY_MS);
 }
 
 function shouldRetry(error) {
@@ -88,7 +98,8 @@ module.exports = {
             : tracks.length === 1
               ? messages.playnext.queuedOne(tracks[0].title)
               : messages.playnext.queuedMany(tracks.length, tracks[0].title);
-          await interaction.editReply({ embeds: [successEmbed(message)] });
+          if (result.started) await interaction.editReply({ embeds: [successEmbed(message)] });
+          else await finishQueuedReply(interaction, player, message);
           return;
         } catch (error) {
           if (!authRefreshed && isYoutubeAuthError(error)) {

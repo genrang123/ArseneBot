@@ -7,8 +7,18 @@ const { requireSameVoiceChannel } = require('./voiceAccess');
 
 const TRANSIENT_YOUTUBE_ERROR_MESSAGE = messages.youtube.transientError;
 
+const QUEUE_ACK_DELETE_DELAY_MS = 8000;
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function finishQueuedReply(interaction, player, message) {
+  await interaction.editReply({ embeds: [successEmbed(message)] });
+  await player.publishNowPlayingMessage?.();
+  setTimeout(() => {
+    interaction.deleteReply?.().catch?.(() => {});
+  }, QUEUE_ACK_DELETE_DELAY_MS);
 }
 
 function shouldRetry(error) {
@@ -105,7 +115,8 @@ module.exports = {
             );
           }
           log.info(interaction.guildId, `[reply] /play editReply-start attempt=${attempt} result=${result.started ? 'started' : 'queued'} deferred=${interaction.deferred} replied=${interaction.replied}`);
-          await interaction.editReply({ embeds: [successEmbed(message)] });
+          if (result.started) await interaction.editReply({ embeds: [successEmbed(message)] });
+          else await finishQueuedReply(interaction, player, message);
           log.info(interaction.guildId, `[reply] /play editReply-ok attempt=${attempt} result=${result.started ? 'started' : 'queued'} deferred=${interaction.deferred} replied=${interaction.replied}`);
           log.info(interaction.guildId, `[timing] /play total duration=${Date.now() - commandStartedAt}ms attempt=${attempt} result=${result.started ? 'started' : 'queued'}`);
           return;

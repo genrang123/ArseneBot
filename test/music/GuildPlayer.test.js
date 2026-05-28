@@ -327,3 +327,28 @@ test('enqueue rolls back current/queue when first play fails', async () => {
   assert.equal(player.current, null);
   assert.deepEqual(player.queue, []);
 });
+
+test('back suppresses idle handler and stops playback before switching to previous track', async () => {
+  const { player, audioPlayer } = createPlayer();
+
+  // Setup: play track one, then idle to advance to track two
+  await player.enqueue([track('one'), track('two')]);
+  await player.handleIdle();
+  assert.equal(player.current.title, 'two');
+  assert.deepEqual(player.history.map((item) => item.title), ['one']);
+  assert.equal(audioPlayer.state.status, AudioPlayerStatus.Playing);
+
+  const stoppedBefore = audioPlayer.stopped;
+
+  // Call back — should stop the player and suppress idle
+  const previous = await player.back();
+
+  assert.equal(previous.title, 'one');
+  assert.equal(player.current.title, 'one');
+  assert.deepEqual(player.queue.map((item) => item.title), ['two']);
+  assert.deepEqual(player.history.map((item) => item.title), []);
+  // Verify stop() was called to halt current playback
+  assert.equal(audioPlayer.stopped, stoppedBefore + 1);
+  // Verify state is Playing again (back restarted playback)
+  assert.equal(audioPlayer.state.status, AudioPlayerStatus.Playing);
+});

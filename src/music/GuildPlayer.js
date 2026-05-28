@@ -45,9 +45,15 @@ class GuildPlayer extends EventEmitter {
     this.isLoading = false;
     this.pendingSkip = false;
     this.nowPlayingMessageRef = null;
+    this._suppressIdle = false;
 
     this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
       this.log.info(this.guildId, 'AudioPlayer → idle');
+      if (this._suppressIdle) {
+        this._suppressIdle = false;
+        this.log.info(this.guildId, 'AudioPlayer idle suppressed (manual track transition)');
+        return;
+      }
       this.handleIdle().catch((error) => this.emit('error', error));
     });
     this.audioPlayer.on('error', (error) => {
@@ -330,6 +336,15 @@ class GuildPlayer extends EventEmitter {
     this.clearIdleTimer();
     if (this.current) this.queue.unshift(this.current);
     this.current = previous;
+
+    // Stop current playback and suppress the idle handler to prevent:
+    // 1. Audio overlap (cleanupCurrentStream only kills the process, not buffered audio)
+    // 2. handleIdle racing and corrupting queue/history/nowPlaying state
+    if (this.audioPlayer.state?.status !== AudioPlayerStatus.Idle) {
+      this._suppressIdle = true;
+      this.audioPlayer.stop();
+    }
+
     await this.playCurrent();
     return previous;
   }

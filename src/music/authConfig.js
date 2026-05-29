@@ -1,0 +1,17 @@
+const path = require('node:path');
+
+const CHROMIUM_CONFIG_ROOT = process.env.CHROMIUM_CONFIG_ROOT || '/home/bot/.config/chromium';
+const CHROMIUM_PROFILE_NAME = process.env.CHROMIUM_PROFILE_NAME || 'chromium';
+const CHROMIUM_PROFILE_DIR = process.env.CHROMIUM_PROFILE || path.join(CHROMIUM_CONFIG_ROOT, CHROMIUM_PROFILE_NAME);
+const CHROMIUM_LOCK_GLOB = path.join(CHROMIUM_PROFILE_DIR, 'Singleton*');
+const YOUTUBE_COOKIE_FILE = process.env.YOUTUBE_COOKIE_FILE || '/app/cookies.txt';
+const YTDLP_COOKIES_FROM_BROWSER = process.env.YTDLP_COOKIES_FROM_BROWSER || `chromium:${CHROMIUM_PROFILE_DIR}`;
+
+module.exports = {
+  CHROMIUM_CONFIG_ROOT,
+  CHROMIUM_PROFILE_NAME,
+  CHROMIUM_PROFILE_DIR,
+  CHROMIUM_LOCK_GLOB,
+  YOUTUBE_COOKIE_FILE,
+  YTDLP_COOKIES_FROM_BROWSER,
+};
